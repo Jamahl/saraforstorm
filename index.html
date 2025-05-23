@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sara for Storm</title>
+  <title>Sara for Storm - application for producer</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -655,7 +655,9 @@
     function changeContent(section) {
       currentSection = section;
       playSound(audioChannel);
-      // tvContent.style.opacity = 0;
+      // Always hide persistent circle unless cover is active
+      var circlePersistent = document.getElementById('cover-letter-circle-persistent');
+      if (circlePersistent) circlePersistent.style.display = 'none';
       setTimeout(() => {
         tvContent.innerHTML = contentMap[section];
         // --- Fix: Force crawl/teleprompter animation restart ---
@@ -666,6 +668,12 @@
             parent.removeChild(tele);
             void parent.offsetWidth;
             parent.appendChild(tele);
+            // Show persistent circle after animation ends
+            tele.addEventListener('animationend', function handler() {
+              if (circlePersistent) circlePersistent.style.display = 'flex';
+              tele.style.display = 'none';
+              tele.removeEventListener('animationend', handler);
+            });
           }
         }
         if(section === 'message') {
