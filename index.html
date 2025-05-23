@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="b0b86f8e-7b3d-434d-9a29-71cfae58b4f5"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sara for Storm - application for producer</title>
+  <title>Sara for Storm - application for Producer</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -484,9 +486,11 @@
   <div class="screen" aria-label="Retro TV Portfolio">
     <div class="antenna"></div>
     <div class="main-display" style="position: relative;">
-      <div id="power-on-overlay" class="power-on-overlay" style="display: flex;">
-        <div class="power-on-static"></div>
-        <div class="power-on-text">POWERING ON...</div>
+      <div id="power-loading-overlay" class="power-on-overlay" style="display: flex; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+        <div class="power-on-text" style="z-index:2;">POWERING ON...</div>
+      </div>
+      <div id="power-on-overlay" class="power-on-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+        <canvas id="tv-static-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;"></canvas>
       </div>
       <div class="crt-scanlines"></div>
       <div class="crt-glow"></div>
@@ -633,9 +637,11 @@
       }
     }
 
+    // Ensure muteIcon is defined
+    const muteIcon = document.getElementById('mute-icon');
     function setMute(state) {
       isMuted = state;
-      muteIcon.innerHTML = isMuted ? '&#128263;' : '&#128266;';
+      if (muteIcon) muteIcon.innerHTML = isMuted ? '&#128263;' : '&#128266;';
     }
 
     function setVolume(up) {
@@ -705,14 +711,17 @@
 
     function setTVPower(state) {
       tvOn = state;
-      if(tvOn) {
-        mainDisplay.style.filter = '';
-        mainDisplay.style.opacity = '1';
+      var staticCanvas = document.getElementById('tv-static-canvas');
+      var powerLoadingOverlay = document.getElementById('power-loading-overlay');
+      if (tvOn) {
         powerOnOverlay.style.display = 'none';
       } else {
-        mainDisplay.style.filter = 'brightness(0.15) grayscale(1) blur(2px)';
-        mainDisplay.style.opacity = '0.7';
-
+        if (powerLoadingOverlay && powerLoadingOverlay.style.display !== 'none') {
+          powerOnOverlay.style.display = 'none';
+          return;
+        }
+        powerOnOverlay.style.display = 'flex';
+        if (staticCanvas) staticCanvas.style.display = '';
       }
     }
     powerBtn.addEventListener('click', () => {
@@ -781,21 +790,19 @@
     window.addEventListener('DOMContentLoaded', () => {
       visitorCount.textContent = `Visitor count: ${VISITOR_COUNT}`;
       setMute(true);
-      // Play power on sound (even if muted, so it's ready)
       audioPower.volume = volumeLevel;
       audioPower.currentTime = 0;
       audioPower.play().catch(()=>{});
-      // Ensure overlay always disappears after 4 seconds
+      // Show loading overlay for 4 seconds, then hide
+      var powerLoadingOverlay = document.getElementById('power-loading-overlay');
+      var staticCanvas = document.getElementById('tv-static-canvas');
+      if (powerLoadingOverlay) powerLoadingOverlay.style.display = 'flex';
+      if (staticCanvas) staticCanvas.style.display = 'none';
       setTimeout(() => {
-        powerOnOverlay.style.display = 'none';
-        playSound(audioPower); // Play again if not muted
-      }, 4000); // Power on overlay duration (4s)
-    }); // Reuse powerOnOverlay variable above
-    // Also forcibly hide overlay after 4 seconds as a failsafe
-    setTimeout(() => {
-      const overlay = document.getElementById('power-on-overlay');
-      if (overlay) overlay.style.display = 'none';
-    }, 4000);
+        if (powerLoadingOverlay) powerLoadingOverlay.style.display = 'none';
+        if (staticCanvas) staticCanvas.style.display = '';
+      }, 4000);
+    });
 
     // --- Accessibility: Keyboard shortcuts for remote ---
     document.addEventListener('keydown', e => {
@@ -807,6 +814,86 @@
     // --- Initial State ---
     activateSidebarBtn(currentSection);
     tvContent.innerHTML = contentMap[currentSection];
+
+    // --- TV Static Effect ---
+    let staticAnimationId = null;
+    function drawStatic() {
+      const canvas = document.getElementById('tv-static-canvas');
+      if (!canvas || canvas.offsetParent === null) return; // Only animate when visible
+      const ctx = canvas.getContext('2d');
+      // Resize canvas to match overlay
+      const parent = canvas.parentElement;
+      const w = parent.offsetWidth;
+      const h = parent.offsetHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      const imageData = ctx.createImageData(w, h);
+      // Horizontal scanlines and color specks
+      for (let y = 0; y < h; y++) {
+        const isScanline = (y % 3 === 0); // every 3rd row is a scanline
+        for (let x = 0; x < w; x++) {
+          let i = (y * w + x) * 4;
+          let shade = Math.random() * 255;
+          // Color specks: 1% chance per pixel
+          if (Math.random() < 0.01) {
+            const colorType = Math.floor(Math.random() * 6);
+            if (colorType === 0) { // red
+              imageData.data[i] = 255; imageData.data[i+1] = 0; imageData.data[i+2] = 0;
+            } else if (colorType === 1) { // green
+              imageData.data[i] = 0; imageData.data[i+1] = 255; imageData.data[i+2] = 0;
+            } else if (colorType === 2) { // blue
+              imageData.data[i] = 0; imageData.data[i+1] = 0; imageData.data[i+2] = 255;
+            } else if (colorType === 3) { // yellow
+              imageData.data[i] = 255; imageData.data[i+1] = 255; imageData.data[i+2] = 0;
+            } else if (colorType === 4) { // magenta
+              imageData.data[i] = 255; imageData.data[i+1] = 0; imageData.data[i+2] = 255;
+            } else { // cyan
+              imageData.data[i] = 0; imageData.data[i+1] = 255; imageData.data[i+2] = 255;
+            }
+          } else {
+            // Regular static
+            imageData.data[i] = shade;
+            imageData.data[i+1] = shade;
+            imageData.data[i+2] = shade;
+          }
+          // Scanline effect: darken scanline rows
+          if (isScanline) {
+            imageData.data[i] *= 0.55;
+            imageData.data[i+1] *= 0.55;
+            imageData.data[i+2] *= 0.55;
+          }
+          imageData.data[i+3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      staticAnimationId = requestAnimationFrame(drawStatic);
+    }
+    function startStatic() {
+      if (!staticAnimationId) drawStatic();
+    }
+    function stopStatic() {
+      if (staticAnimationId) {
+        cancelAnimationFrame(staticAnimationId);
+        staticAnimationId = null;
+      }
+      const canvas = document.getElementById('tv-static-canvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    // Start static when overlay is visible
+    // Use the already declared powerOnOverlay variable
+    const observer = new MutationObserver(() => {
+      if (powerOnOverlay.style.display !== 'none') {
+        startStatic();
+      } else {
+        stopStatic();
+      }
+    });
+    observer.observe(powerOnOverlay, { attributes: true, attributeFilter: ['style'] });
   </script>
 <script>
 // Show persistent 'click for rizz' circle exactly when the animation ends, ensuring it's always centered
