@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sara for Storm</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    body {
+      margin: 0;
+      background: black;
+      font-family: 'Press Start 2P', monospace;
+      color: #ffff00;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .screen {
+      width: 64vw;
+      max-width: 726px;
+      height: 64vh;
+      background: #ff69b4;
+      border-radius: 40px 40px 20px 20px;
+      padding: 1rem;
+      box-shadow: 0 0 40px #ff69b4;
+      display: flex;
+      position: relative;
+      border: 10px solid #660033;
+      margin-top: 2rem;
+      min-width: 320px;
+      min-height: 350px;
+      z-index: 2;
+    }
+
+    .main-display {
+      flex: 3;
+      background: black;
+      border-radius: 20px;
+      padding: 2rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      margin-right: 1rem;
+      overflow: hidden;
+      box-shadow: 0 0 30px #ff69b4 inset;
+    }
+
+    .crt-scanlines {
+      pointer-events: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 2;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.04) 0px,
+        rgba(255,255,255,0.04) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+      mix-blend-mode: screen;
+      opacity: 0.7;
+    }
+    .crt-glow {
+      pointer-events: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 3;
+      box-shadow: 0 0 40px 10px #ff69b4;
+      opacity: 0.18;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 4;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 350px;
+    }
+
+    .main-content h1, .main-content h2, .main-content p {
+      margin: 0.5rem 0;
+      text-shadow: 0 0 5px #ffff00;
+    }
+    .main-content h1 { color: #ffcc00; font-size: 1.1rem; }
+    .main-content h2 { color: #ff3333; font-size: 1rem; }
+    .main-content p { color: #cccccc; font-size: 0.75rem; }
+
+    .sidebar {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 1rem 0.5rem;
+      position: relative;
+      justify-content: flex-start;
+      z-index: 4;
+    }
+    .sidebar button {
+      background: #ff1493;
+      border: 2px solid black;
+      color: black;
+      padding: 0.5rem;
+      font-size: 0.5rem;
+      text-transform: uppercase;
+      text-shadow: 0 0 2px #000000;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 8px;
+      letter-spacing: 1px;
+      outline: none;
+    }
+    .sidebar button:hover, .sidebar button.active {
+      background: #ff85b3;
+      box-shadow: 0 0 5px #ff69b4;
+    }
+    .tv-buttons {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      margin-top: auto;
+      gap: 0.5rem;
+      padding-top: 0.5rem;
+    }
+    .tv-buttons div {
+      width: 20px; height: 20px;
+      background: #222;
+      border: 2px solid #ff69b4;
+      border-radius: 50%;
+      box-shadow: inset 0 0 5px #000000;
+    }
+
+    .antenna {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      width: 60px;
+      height: 30px;
+      border-left: 4px solid #ff69b4;
+      border-right: 4px solid #ff69b4;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    .antenna::before, .antenna::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      width: 10px;
+      height: 10px;
+      background: #ff69b4;
+      border-radius: 50%;
+    }
+    .antenna::before { left: -10px; }
+    .antenna::after { right: -10px; }
+
+    .visitor-count {
+      font-size: 0.6rem;
+      margin-top: 1rem;
+      color: #ff69b4;
+      text-shadow: 0 0 3px #ff69b4;
+      z-index: 1;
+    }
+
+    /* Remote Control */
+    .remote-control {
+      position: fixed;
+      right: 2vw;
+      bottom: 2vw;
+      width: 72px;
+      height: 180px;
+      background: #333;
+      border: 3px solid #ff69b4;
+      border-radius: 15px 15px 10px 10px;
+      box-shadow: 0 0 12px #ff69b4, 0 0 24px #000 inset;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 10px 8px 8px 8px;
+      z-index: 100;
+      gap: 0;
+      user-select: none;
+      overflow: hidden;
+    }
+    .remote-label {
+      margin-bottom: 8px;
+    }
+    .remote-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 10px 0;
+    }
+    .remote-btn span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+    .remote-control * {
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+    .remote-btn {
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      max-width: 32px;
+      max-height: 32px;
+    }
+    .remote-label {
+      width: 100%;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .remote-btn {
+      background: #222;
+      border: 2px solid #ff69b4;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      margin: 4px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ff69b4;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      outline: none;
+    }
+    .remote-btn:active, .remote-btn.active {
+      background: #ff69b4;
+      color: #222;
+    }
+    .remote-label {
+      color: #ff69b4;
+      font-size: 0.5rem;
+      margin-bottom: 2px;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    .remote-power {
+      color: #ff3333;
+    }
+
+    /* Star Wars Crawl */
+    .star-wars {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 350px;
+      max-width: 100%;
+      overflow: hidden;
+      perspective: 600px;
+      background: #111;
+      z-index: 10;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .crawl {
+      font-family: 'Press Start 2P', monospace;
+      color: #ffe81f;
+      font-size: 2vw;
+      text-align: center;
+      line-height: 1.7;
+      position: absolute;
+      bottom: -100%;
+      width: 90%;
+      left: 5%;
+      transform: rotateX(20deg) scale(1.1);
+      transform-origin: 50% 100%;
+      animation: crawl 32s linear forwards;
+      text-shadow: 0 0 6px #ffe81f, 0 0 12px #000;
+      background: rgba(0,0,0,0.9);
+      z-index: 11;
+      padding: 0 2vw;
+      border: none;
+    }
+    .teleprompter {
+      font-family: 'Press Start 2P', monospace;
+      color: #ffe81f;
+      font-size: 1.5vw;
+      text-align: left;
+      line-height: 2.2vw;
+      position: absolute;
+      bottom: 50%;
+      width: 90%;
+      left: 5%;
+      background: transparent;
+      z-index: 11;
+      padding: 2vw;
+      border: none;
+      animation: teleprompter-crawl 20s linear forwards;
+      overflow: hidden;
+      box-sizing: border-box;
+      text-shadow: 0 0 8px #111, 0 0 2px #ffe81f;
+      will-change: transform;
+    }
+    @keyframes teleprompter-crawl {
+      0% { transform: translateY(100%); }
+      85% { transform: translateY(0%); }
+      100% { transform: translateY(0%); }
+    }
+    @keyframes crawl {
+      0% {
+        bottom: -100%;
+        transform: rotateX(22deg) scale(1.2);
+        opacity: 0.7;
+      }
+      10% {
+        opacity: 1;
+      }
+      100% {
+        bottom: 100%;
+        transform: rotateX(22deg) scale(0.5);
+        opacity: 0.1;
+      }
+    }
+
+    /* Power On Animation */
+    .power-on-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at 50% 60%, #fff 0%, #ddd 10%, #222 50%, #000 100%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: powerOnFlicker 1.2s steps(3, end) infinite alternate;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .power-on-static {
+      width: 100%; height: 100%;
+      background: repeating-linear-gradient(0deg, #fff 0px, #fff 1px, #000 2px, #000 4px);
+      opacity: 0.16;
+      pointer-events: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    @keyframes powerOnFlicker {
+      0% { opacity: 1; }
+      100% { opacity: 0.7; }
+    }
+    .power-on-text {
+      color: #ff69b4;
+      font-size: 1.2rem;
+      text-shadow: 0 0 20px #fff, 0 0 60px #ff69b4;
+      font-family: 'Press Start 2P', monospace;
+      text-align: center;
+      z-index: 10000;
+      letter-spacing: 2px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .screen { width: 98vw; max-width: 100vw; }
+    }
+    @media (max-width: 600px) {
+      .screen {
+        flex-direction: column;
+        width: 100vw;
+        min-width: unset;
+        height: auto;
+        min-height: 350px;
+        border-width: 6px;
+        margin-top: 0.5rem;
+      }
+      .main-display {
+        margin-right: 0;
+        padding: 1rem;
+      }
+      .sidebar {
+        flex-direction: row;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        justify-content: center;
+      }
+      .remote-control {
+        right: 2vw; bottom: 2vw;
+        width: 60px; height: 120px;
+        padding: 8px 4px 4px 4px;
+      }
+    }
+    /* Meme grid and overlay styles */
+    .meme-grid {
+      display: flex;
+      gap: 1.5vw;
+      justify-content: center;
+      margin-top: 1.5vw;
+    }
+    .meme-thumb {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #222;
+      border: 2px solid #ff69b4;
+      border-radius: 10px;
+      padding: 0.5vw 1vw;
+      cursor: pointer;
+      box-shadow: 0 0 8px #ff69b4;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .meme-thumb:hover {
+      transform: scale(1.07);
+      box-shadow: 0 0 16px #ff69b4;
+    }
+    .meme-thumb img {
+      max-width: 80px;
+      max-height: 80px;
+      border-radius: 6px;
+      margin-bottom: 0.5vw;
+      object-fit: contain;
+      background: #fff;
+    }
+    .meme-thumb span {
+      color: #ff69b4;
+      font-size: 0.7rem;
+      margin-top: 0.2vw;
+    }
+    .meme-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.96);
+      z-index: 2147483647;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      transition: opacity 0.2s;
+      pointer-events: auto;
+    }
+    .meme-overlay img {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: 12px;
+      box-shadow: 0 0 24px #ff69b4;
+      background: #fff;
+      margin-bottom: 1vw;
+    }
+    .meme-overlay-close {
+      position: absolute;
+      top: 2vw;
+      right: 3vw;
+      font-size: 2.5rem;
+      color: #ff69b4;
+      cursor: pointer;
+      font-weight: bold;
+      z-index: 100001;
+      text-shadow: 0 0 8px #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="screen" aria-label="Retro TV Portfolio">
+    <div class="antenna"></div>
+    <div class="main-display" style="position: relative;">
+      <div id="power-on-overlay" class="power-on-overlay" style="display: flex;">
+        <div class="power-on-static"></div>
+        <div class="power-on-text">POWERING ON...</div>
+      </div>
+      <div class="crt-scanlines"></div>
+      <div class="crt-glow"></div>
+      <div class="main-content" id="tv-content">
+        <!-- Content will be injected by JS -->
+      </div>
+      <a id="cover-letter-circle-persistent" href="https://drive.google.com/file/d/1cLtxTT7QrVDA6U-3-5pnZuSkLhvZlNgQ/view?usp=sharing" target="_blank" rel="noopener" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; text-decoration: none;">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <polygon points="120,20 148,38 180,30 190,60 220,70 210,100 230,120 210,140 220,170 190,180 180,210 148,202 120,220 92,202 60,210 50,180 20,170 30,140 10,120 30,100 20,70 50,60 60,30 92,38" fill="#ff3187" />
+        </svg>
+        <div style="position: absolute; width: 180px; height: 180px; top: 30px; left: 30px; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: none;">
+          <span style="color: white; font-size: 1.45rem; font-family: 'Press Start 2P', monospace; text-shadow: 0 0 6px #d72670; line-height: 1.2;">click for rizz</span>
+        </div>
+      </a>
+    </div>
+    <div class="sidebar" role="navigation" aria-label="Main navigation">
+      <button class="sidebar-btn" data-section="home" aria-label="Home">Home</button>
+      <button class="sidebar-btn" data-section="cv" aria-label="CV">CV</button>
+      <button class="sidebar-btn" data-section="cover" aria-label="Cover Letter">Cover Letter</button>
+      <button class="sidebar-btn" data-section="memes" aria-label="Memes">Memes</button>
+      <button class="sidebar-btn" data-section="contact" aria-label="Contact">Contact</button>
+      <button class="sidebar-btn" data-section="video" aria-label="Video">Video</button>
+      <div class="tv-buttons">
+        <div title="Power"></div>
+        <div title="Channel"></div>
+        <div title="Volume"></div>
+      </div>
+    </div>
+  </div>
+  <div class="visitor-count" id="visitor-count">Visitor count: 82</div>
+
+  <!-- Remote Control -->
+  <div class="remote-control" aria-label="Remote Control">
+    <div class="remote-label">REMOTE</div>
+    <button class="remote-btn remote-power" id="remote-power" title="Power" tabindex="0">
+      <span aria-hidden="true">&#128268;</span>
+    </button>
+    <button class="remote-btn remote-channel-up" id="remote-channel-up" title="Channel Up" tabindex="0">
+      <span aria-hidden="true">&#9650;</span>
+    </button>
+    <button class="remote-btn remote-channel-down" id="remote-channel-down" title="Channel Down" tabindex="0">
+      <span aria-hidden="true">&#9660;</span>
+    </button>
+  </div>
+
+  <!-- Audio Elements (hidden) -->
+  <audio id="audio-power" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae5a8.mp3" preload="auto"></audio>
+  <audio id="audio-channel" src="https://cdn.pixabay.com/audio/2022/03/15/audio_116b9f7d8c.mp3" preload="auto"></audio>
+
+  <script>
+    // --- Settings ---
+    const VISITOR_COUNT = 82;
+    let isMuted = true;
+    let volumeLevel = 0.5;
+    let powerOnPlayed = false;
+    let currentSection = 'home';
+
+    // --- DOM Elements ---
+    const tvContent = document.getElementById('tv-content');
+    const visitorCount = document.getElementById('visitor-count');
+    const audioPower = document.getElementById('audio-power');
+    const audioChannel = document.getElementById('audio-channel');
+    const sidebarBtns = document.querySelectorAll('.sidebar-btn');
+
+    // --- Content Map ---
+    const contentMap = {
+      home: `
+        <h1 style="font-size:1.2rem; margin-top:2.5rem; margin-bottom:0.3rem;">Sara Pinzón</h1>
+        <div style="font-size:0.8rem; color:#ff69b4; margin-bottom:0.3rem; line-height:1.5; font-weight: bold;">Application for producer at Storm Ideas</div>
+        <h2 style="font-size:0.8rem; font-weight:normal; margin:0 0 0.3rem 0; color:#ffe81f; line-height:1.5;">Producer | Content Strategist | Writer</h2>
+        <div style="font-size:0.7rem; color:#ff69b4; margin-bottom:0.3rem; line-height:1.5;">Scorpio Sun | Virgo Moon | Sagittarius Rising</div>
+        <blockquote style="font-size:0.7rem; color:#cccccc; margin-bottom:0.3rem; font-style:italic; border-left:3px solid #ffe81f; padding-left:1em; line-height:1.5;">To be cringe is to be free (threat).</blockquote>
+        <img src="https://raw.githubusercontent.com/Jamahl/saraforstorm/f35a648a58bba48e462bb0b64b6b4deda1d0d051/pic-new.png
+
+" alt="Sara Pinzón" style="max-width: 260px; max-height: 320px; border-radius: 14px; margin: 0.5vw auto 0 auto; display: block; box-shadow: 0 0 18px <! -- #ff69b4 --> ; background: ;" />
+      `,
+      // Added download link for CV
+      cv: `
+        <h1>CURRICULUM VITAE</h1>
+        <p style="line-height:2rem;">For: Storm Ideas<br>Role: Producer</p>
+        <a href="https://drive.google.com/file/d/10MGYQampo7OoX9lN6Is-yvMtHAYe4YLH/view?usp=sharing" target="_blank" rel="noopener" style="color:#00e; text-decoration:underline;">Download CV (PDF)</a>
+      `,
+      // Added download link for Cover Letter
+      cover: `
+        <div class="star-wars">
+          <div class="teleprompter">
+            <p style="margin-bottom:0.7rem;">Not to be dramatic or anything, but I was <span style="color:#ffe81f;">BORN for this role</span>.</p>
+            <p style="margin-bottom:0.7rem;">I'm highly educated, while also serving internet brainrot, critical thinking and fits.</p>
+            <p style="margin-bottom:0.7rem;">I went from creating fan edits on my iPhone 4S for a TV show I was obsessed with when I was 13, to now basically doing the same thing and getting paid for it.</p>
+                        <div style="display: flex; justify-content: center;">
+              <a id="cover-letter-circle-teleprompter" href="https://drive.google.com/file/d/1cLtxTT7QrVDA6U-3-5pnZuSkLhvZlNgQ/view?usp=sharing" target="_blank" rel="noopener" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; position: relative;">
+  <svg width="240" height="240" viewBox="0 0 240 240">
+    <polygon points="120,20 148,38 180,30 190,60 220,70 210,100 230,120 210,140 220,170 190,180 180,210 148,202 120,220 92,202 60,210 50,180 20,170 30,140 10,120 30,100 20,70 50,60 60,30 92,38" fill="#ff3187" />
+  </svg>
+  <div style="position: absolute; width: 180px; height: 180px; top: 30px; left: 30px; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: none;">
+    <span style="color: white; font-size: 1.45rem; font-family: 'Press Start 2P', monospace; text-shadow: 0 0 6px #d72670; line-height: 1.2;">click for rizz</span>
+  </div>
+</a>
+            </div>
+          </div>
+        </div>
+
+          </div>
+        </div>
+          </div>
+        </div>
+      `,
+      // Updated MEMES section to show meme thumbnails and overlay trigger
+      memes: `
+        <h1>MEMES</h1>
+        <div class="meme-grid">
+          <div class="meme-thumb" data-meme="1">
+            <img src="https://raw.githubusercontent.com/Jamahl/saraforstorm/ce5eb0c88ff538050e003abadfb792122749acbb/meme1.jpeg" alt="Meme 1" />
+            <span>Meme 1</span>
+          </div>
+          <div class="meme-thumb" data-meme="2">
+            <img src="https://raw.githubusercontent.com/Jamahl/saraforstorm/ce5eb0c88ff538050e003abadfb792122749acbb/meme2.jpeg" alt="Meme 2" />
+            <span>Meme 2</span>
+          </div>
+          <div class="meme-thumb" data-meme="3">
+            <img src="https://raw.githubusercontent.com/Jamahl/saraforstorm/ce5eb0c88ff538050e003abadfb792122749acbb/meme3.jpeg" alt="Meme 3" />
+            <span>Meme 3</span>
+          </div>
+        </div>
+        <!-- Meme overlay moved to end of body for global stacking -->
+      `,
+
+      contact: `
+        <h1>CONTACT</h1>
+        <p>Email: slpinzonp@gmail.com<br></p><p>Phone: 305 791 76 81</p>
+      `,
+      video: `
+        <h1>VIDEO</h1>
+        <p>Coming Soon: My personal intro and project walkthrough.</p>
+      `
+    };
+
+    // --- Utility Functions ---
+    function playSound(audio) {
+      if (!isMuted) {
+        audio.currentTime = 0;
+        audio.volume = volumeLevel;
+        audio.play();
+      }
+    }
+
+    function setMute(state) {
+      isMuted = state;
+      muteIcon.innerHTML = isMuted ? '&#128263;' : '&#128266;';
+    }
+
+    function setVolume(up) {
+      if (up) {
+        volumeLevel = Math.min(1, volumeLevel + 0.1);
+      } else {
+        volumeLevel = Math.max(0, volumeLevel - 0.1);
+      }
+    }
+
+    function activateSidebarBtn(section) {
+      sidebarBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.section === section);
+      });
+    }
+
+    function changeContent(section) {
+      currentSection = section;
+      playSound(audioChannel);
+      // tvContent.style.opacity = 0;
+      setTimeout(() => {
+        tvContent.innerHTML = contentMap[section];
+        // --- Fix: Force crawl/teleprompter animation restart ---
+        if(section === 'cover') {
+          const tele = tvContent.querySelector('.teleprompter');
+          if (tele) {
+            const parent = tele.parentNode;
+            parent.removeChild(tele);
+            void parent.offsetWidth;
+            parent.appendChild(tele);
+          }
+        }
+        if(section === 'message') {
+          const tele = tvContent.querySelector('.teleprompter');
+          if (tele) {
+            const parent = tele.parentNode;
+            parent.removeChild(tele);
+            void parent.offsetWidth;
+            parent.appendChild(tele);
+          } else {
+            tvContent.innerHTML = '<div style="color:#ffe81f; font-size:2vw;">Message could not load. Please contact site owner.</div>';
+          }
+        }
+        // tvContent.style.opacity = 1;
+      }, 200);
+      activateSidebarBtn(section);
+    }
+
+    // --- Power/Channel Logic ---
+    let tvOn = true;
+    const powerBtn = document.getElementById('remote-power');
+    const channelUpBtn = document.getElementById('remote-channel-up');
+    const channelDownBtn = document.getElementById('remote-channel-down');
+    const mainDisplay = document.querySelector('.main-display');
+    // Only declare powerOnOverlay here, reuse below
+    const powerOnOverlay = document.getElementById('power-on-overlay');
+    const tvSections = ['home','cv','cover','memes','contact','video'];
+    let currentChannelIdx = tvSections.indexOf(currentSection);
+
+    function setTVPower(state) {
+      tvOn = state;
+      if(tvOn) {
+        mainDisplay.style.filter = '';
+        mainDisplay.style.opacity = '1';
+        powerOnOverlay.style.display = 'none';
+      } else {
+        mainDisplay.style.filter = 'brightness(0.15) grayscale(1) blur(2px)';
+        mainDisplay.style.opacity = '0.7';
+
+      }
+    }
+    powerBtn.addEventListener('click', () => {
+      setTVPower(!tvOn);
+    });
+    channelUpBtn.addEventListener('click', () => {
+      if(!tvOn) return;
+      currentChannelIdx = (currentChannelIdx + 1) % tvSections.length;
+      changeContent(tvSections[currentChannelIdx]);
+    });
+    channelDownBtn.addEventListener('click', () => {
+      if(!tvOn) return;
+      currentChannelIdx = (currentChannelIdx - 1 + tvSections.length) % tvSections.length;
+      changeContent(tvSections[currentChannelIdx]);
+    });
+
+    sidebarBtns.forEach(btn => {
+      btn.addEventListener('click', e => {
+        const section = btn.dataset.section;
+        currentChannelIdx = tvSections.indexOf(section);
+        changeContent(section);
+      });
+    });
+
+
+    // --- Meme Overlay Logic ---
+    // Create meme overlay once and append to body
+    (function() {
+      if (!document.getElementById('meme-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'meme-overlay';
+        overlay.className = 'meme-overlay';
+        overlay.style.display = 'none';
+        overlay.innerHTML = `
+          <span class="meme-overlay-close" id="meme-overlay-close" title="Close">&times;</span>
+          <img id="meme-overlay-img" src="" alt="Meme Full" />
+        `;
+        document.body.appendChild(overlay);
+      }
+    })();
+
+    document.addEventListener('click', function(e) {
+      // Use event delegation for meme thumbnails
+      if (e.target.closest('.meme-thumb')) {
+        const memeNum = e.target.closest('.meme-thumb').dataset.meme;
+        let memeUrl = '';
+        if (memeNum === '1') memeUrl = 'https://raw.githubusercontent.com/Jamahl/saraforstorm/ce5eb0c88ff538050e003abadfb792122749acbb/meme1.jpeg';
+        if (memeNum === '2') memeUrl = 'https://raw.githubusercontent.com/Jamahl/saraforstorm/ce5eb0c88ff538050e003abadfb792122749acbb/meme2.jpeg';
+        if (memeNum === '3') memeUrl = 'https://raw.githubusercontent.com/Jamahl/saraforstorm/ce5eb0c88ff538050e003abadfb792122749acbb/meme3.jpeg';
+        const overlay = document.getElementById('meme-overlay');
+        const overlayImg = document.getElementById('meme-overlay-img');
+        if (overlay && overlayImg) {
+          overlayImg.src = memeUrl;
+          overlay.style.display = 'flex';
+          document.body.appendChild(overlay); // ensure overlay is on top of everything
+        }
+      }
+      // Close overlay if clicking close button or outside image
+      if (e.target.id === 'meme-overlay-close' || (e.target.id === 'meme-overlay' && e.target === e.currentTarget)) {
+        const overlay = document.getElementById('meme-overlay');
+        if (overlay) overlay.style.display = 'none';
+      }
+    });
+
+    // --- Power On Animation ---
+    window.addEventListener('DOMContentLoaded', () => {
+      visitorCount.textContent = `Visitor count: ${VISITOR_COUNT}`;
+      setMute(true);
+      // Play power on sound (even if muted, so it's ready)
+      audioPower.volume = volumeLevel;
+      audioPower.currentTime = 0;
+      audioPower.play().catch(()=>{});
+      // Ensure overlay always disappears after 4 seconds
+      setTimeout(() => {
+        powerOnOverlay.style.display = 'none';
+        playSound(audioPower); // Play again if not muted
+      }, 4000); // Power on overlay duration (4s)
+    }); // Reuse powerOnOverlay variable above
+    // Also forcibly hide overlay after 4 seconds as a failsafe
+    setTimeout(() => {
+      const overlay = document.getElementById('power-on-overlay');
+      if (overlay) overlay.style.display = 'none';
+    }, 4000);
+
+    // --- Accessibility: Keyboard shortcuts for remote ---
+    document.addEventListener('keydown', e => {
+      if (e.key === 'm') setMute(!isMuted);
+      if (e.key === '+') setVolume(true);
+      if (e.key === '-') setVolume(false);
+    });
+
+    // --- Initial State ---
+    activateSidebarBtn(currentSection);
+    tvContent.innerHTML = contentMap[currentSection];
+  </script>
+<script>
+// Show persistent 'click for rizz' circle exactly when the animation ends, ensuring it's always centered
+window.addEventListener('DOMContentLoaded', function () {
+  var teleprompter = document.querySelector('.teleprompter');
+  var circleTele = document.getElementById('cover-letter-circle-teleprompter');
+  var circlePersistent = document.getElementById('cover-letter-circle-persistent');
+  if (teleprompter && circleTele && circlePersistent) {
+    teleprompter.addEventListener('animationend', function () {
+      circleTele.style.display = 'none';
+      circlePersistent.style.display = 'flex';
+    });
+  }
+});
+</script>
+</body>
+</html>
